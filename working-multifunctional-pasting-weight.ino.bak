@@ -1,0 +1,302 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <HardwareSerial.h>
+#include <WiFiManager.h>
+#include <LittleFS.h>
+#include <ArduinoJson.h>
+
+// ---------------- PIN ----------------
+#define RX_PIN 16
+#define TX_PIN -1
+#define LED_WIFI 2
+#define LED_SUCCESS 15
+#define RESET_PIN 4
+
+// ---------------- CONFIG ----------------
+#define FORCE_MACHINE_NO "2"
+char machine_no[10] = "2";   // your machine
+char server_ip[50] = "192.168.1.2:50001";
+String serverUrl;
+
+// ---------------- SERIAL ----------------
+HardwareSerial scaleSerial(1);
+
+// ---------------- STATE ----------------
+float lastWeight = 0;
+int lastMainWeight = 0;
+unsigned long stableStartTime = 0;
+
+bool weightSent = false;
+int activeItemId = 0;
+
+unsigned long lastSync = 0;
+unsigned long lastSendAttempt = 0;
+bool shouldSaveConfig = false;
+
+// ---------------- CALLBACK ----------------
+void saveConfigCallback() {
+  shouldSaveConfig = true;
+}
+
+void copySafe(char* dest, size_t destSize, const char* src) {
+  if (!dest || destSize == 0) return;
+  if (!src) {
+    dest[0] = '\0';
+    return;
+  }
+
+  strncpy(dest, src, destSize - 1);
+  dest[destSize - 1] = '\0';
+}
+
+void sanitizeMachineNo(char* value, size_t valueSize) {
+  if (!value || valueSize == 0) return;
+
+  int m = atoi(value);
+  if (m <= 0 || m > 99999999) {
+    m = 2;
+  }
+
+  snprintf(value, valueSize, "%d", m);
+}
+
+// ---------------- LOAD CONFIG ----------------
+void loadConfig() {
+  if (!LittleFS.begin(true)) return;
+
+  if (LittleFS.exists("/config.json")) {
+    File file = LittleFS.open("/config.json", "r");
+    if (!file) return;
+
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, file);
+    if (err) {
+      file.close();
+      return;
+    }
+
+    copySafe(machine_no, sizeof(machine_no), doc["mno"] | "2");
+    copySafe(server_ip, sizeof(server_ip), doc["sip"] | "192.168.1.2:50001");
+    sanitizeMachineNo(machine_no, sizeof(machine_no));
+
+    file.close();
+  }
+}
+
+// ---------------- SAVE CONFIG ----------------
+void saveConfig() {
+  File file = LittleFS.open("/config.json", "w");
+
+  StaticJsonDocument<256> doc;
+  doc["mno"] = machine_no;
+  doc["sip"] = server_ip;
+
+  serializeJson(doc, file);
+  file.close();
+}
+
+// ---------------- PARSE WEIGHT (FIXED) ----------------
+float parseWeight(String s) {
+  s.trim();
+
+  String numStr = "";
+  for (int i = s.length() - 1; i >= 0; i--) {
+    char c = s.charAt(i);
+    if ((c >= '0' && c <= '9') || c == '.' || c == '-') {
+      numStr = String(c) + numStr;
+    } else if (numStr.length() > 0) {
+      break;
+    }
+  }
+
+  numStr.trim();
+  if (numStr.length() == 0) return -1;
+
+  float w = numStr.toFloat();
+
+  if (w <= 0 || w > 1000) return -1;
+
+  return w;
+}
+
+// ---------------- SEND DATA ----------------
+bool sendData(float weight) {
+  if (WiFi.status() != WL_CONNECTED) return false;
+
+  HTTPClient http;
+  http.setTimeout(3000);
+
+  http.begin(serverUrl);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  http.addHeader("Accept", "application/json");
+
+  String postData = "machine_no=" + String(machine_no) +
+                    "&item_id=" + String(activeItemId) +
+                    "&weight=" + String(weight, 2);
+
+  int httpCode = http.POST(postData);
+
+  bool ok = false;
+
+  String response = http.getString();
+
+  if (httpCode > 0) {
+    StaticJsonDocument<128> resDoc;
+    DeserializationError err = deserializeJson(resDoc, response);
+
+    const char* status = resDoc["status"] | "";
+    if (!err && (String(status) == "ok" || String(status) == "success")) {
+      ok = true;
+    } else if (response.indexOf("\"status\":\"ok\"") != -1 || response.indexOf("\"status\":\"success\"") != -1) {
+      ok = true;
+    }
+  }
+
+  if (ok) {
+    digitalWrite(LED_SUCCESS, HIGH);
+  } else {
+    digitalWrite(LED_SUCCESS, LOW);
+  }
+
+  http.end();
+  return ok;
+}
+
+// ---------------- SYNC ITEM ----------------
+void syncActiveItem() {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  HTTPClient http;
+
+  String url = serverUrl + "?action=get_active_item&machine_no=" + String(machine_no);
+  http.begin(url);
+
+  int code = http.GET();
+
+  if (code == 200) {
+    String res = http.getString();
+    int syncedItem = res.toInt();
+    if (syncedItem > 0) {
+      activeItemId = syncedItem;
+    }
+  }
+
+  http.end();
+  lastSync = millis();
+}
+
+// ---------------- SETUP ----------------
+void setup() {
+  Serial.begin(115200);
+  scaleSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
+
+  pinMode(LED_WIFI, OUTPUT);
+  pinMode(LED_SUCCESS, OUTPUT);
+  pinMode(RESET_PIN, INPUT_PULLUP);
+
+  digitalWrite(LED_WIFI, LOW);
+  digitalWrite(LED_SUCCESS, LOW);
+
+  loadConfig();
+  copySafe(machine_no, sizeof(machine_no), FORCE_MACHINE_NO);
+  sanitizeMachineNo(machine_no, sizeof(machine_no));
+
+  if (digitalRead(RESET_PIN) == LOW) {
+    WiFiManager wm;
+    wm.resetSettings();
+    LittleFS.format();
+    delay(1000);
+    ESP.restart();
+  }
+
+  WiFiManager wm;
+  wm.setSaveConfigCallback(saveConfigCallback);
+
+  WiFiManagerParameter custom_mno("mno", "Machine No", machine_no, 10);
+  WiFiManagerParameter custom_sip("sip", "Server IP", server_ip, 50);
+
+  wm.addParameter(&custom_mno);
+  wm.addParameter(&custom_sip);
+
+  if (!wm.autoConnect("Scale-Setup")) {
+    ESP.restart();
+  }
+
+  digitalWrite(LED_WIFI, HIGH);
+
+  if (shouldSaveConfig) {
+    copySafe(machine_no, sizeof(machine_no), FORCE_MACHINE_NO);
+    copySafe(server_ip, sizeof(server_ip), custom_sip.getValue());
+    sanitizeMachineNo(machine_no, sizeof(machine_no));
+    saveConfig();
+  }
+
+  copySafe(machine_no, sizeof(machine_no), FORCE_MACHINE_NO);
+  sanitizeMachineNo(machine_no, sizeof(machine_no));
+
+  serverUrl = "http://" + String(server_ip) + "/pasting-weight/api.php";
+
+  syncActiveItem();
+}
+
+// ---------------- LOOP ----------------
+void loop() {
+
+  // WiFi LED
+  digitalWrite(LED_WIFI, WiFi.status() == WL_CONNECTED);
+
+  // Sync item every 20 sec
+  if (millis() - lastSync > 20000) {
+    syncActiveItem();
+  }
+
+  // -------- SERIAL READ --------
+  if (scaleSerial.available()) {
+
+    String line = scaleSerial.readStringUntil('\n');
+    line.trim();
+
+    float weight = parseWeight(line);
+    int mainWeight = (int)weight;
+
+    // Reset readiness is based on integer part only.
+    if (mainWeight <= 0) {
+      weightSent = false;
+      stableStartTime = 0;
+      digitalWrite(LED_SUCCESS, LOW);
+      return;
+    }
+
+    // ✅ STABILITY (0.5 sec)
+    if (mainWeight == lastMainWeight) {
+
+      if (stableStartTime == 0) {
+        stableStartTime = millis();
+      }
+
+      if ((millis() - stableStartTime >= 500) && !weightSent) {
+        if (millis() - lastSendAttempt >= 1000) {
+          lastSendAttempt = millis();
+
+          weightSent = sendData(weight);
+        }
+      }
+
+    } else {
+      stableStartTime = millis();
+    }
+
+    lastMainWeight = mainWeight;
+    lastWeight = weight;
+  }
+
+  // Reset button hold
+  if (digitalRead(RESET_PIN) == LOW) {
+    delay(3000);
+    if (digitalRead(RESET_PIN) == LOW) {
+      WiFiManager wm;
+      wm.resetSettings();
+      ESP.restart();
+    }
+  }
+}

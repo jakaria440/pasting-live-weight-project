@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAMKO | Reports</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%); 
+            color: #e0e0e0; 
+            font-family: 'Segoe UI', 'Roboto', sans-serif; 
+            margin: 0; 
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        .navbar { 
+            background: linear-gradient(90deg, #1a1f2e 0%, #252d3a 100%);
+            padding: 20px 35px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border-bottom: 3px solid #2ecc71; 
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .nav-brand { 
+            font-size: 24px; 
+            font-weight: 700; 
+            color: #2ecc71;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(46, 204, 113, 0.3);
+        }
+        
+        .nav-links a { 
+            color: #999; 
+            text-decoration: none; 
+            margin-left: 30px; 
+            text-transform: uppercase; 
+            font-size: 12px; 
+            font-weight: 600;
+            transition: all 0.3s ease;
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+        
+        .nav-links a:hover { 
+            color: #2ecc71;
+            background: rgba(46, 204, 113, 0.1);
+        }
+        
+        .nav-links a.active { 
+            color: #2ecc71;
+            border-bottom: 2px solid #2ecc71;
+        }
+
+        .container {
+            padding: 0 35px 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .filter-section {
+            background: linear-gradient(135deg, #1a1f2e 0%, #252d3a 100%);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .filter-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2ecc71;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        select, input[type="date"] {
+            background: #2d333b;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        select:hover, input[type="date"]:hover {
+            border-color: #2ecc71;
+            background: #323841;
+        }
+
+        select:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #2ecc71;
+            box-shadow: 0 0 8px rgba(46, 204, 113, 0.2);
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+            align-self: flex-end;
+        }
+
+        .btn-export:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(46, 204, 113, 0.4);
+        }
+
+        .btn-export:active {
+            transform: translateY(0);
+        }
+
+        .report-section {
+            background: linear-gradient(135deg, #1a1f2e 0%, #252d3a 100%);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .report-content {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 25px;
+            align-items: start;
+        }
+
+        .chart-container {
+            background: linear-gradient(135deg, #2d333b 0%, #323841 100%);
+            border: 1px solid #3a4049;
+            border-radius: 8px;
+            padding: 20px;
+            height: fit-content;
+            min-height: 350px;
+            position: relative;
+        }
+
+        .chart-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #2ecc71;
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        #chartCanvas {
+            max-width: 100%;
+            display: block !important;
+            position: relative !important;
+            height: 300px !important;
+        }
+
+        .table-container {
+            width: 100%;
+        }
+
+        @media (max-width: 1200px) {
+            .report-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .report-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2ecc71;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: linear-gradient(135deg, #2d333b 0%, #323841 100%);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .report-table thead {
+            background: linear-gradient(135deg, #1a1f2e 0%, #252d3a 100%);
+        }
+
+        .report-table th {
+            color: #2ecc71;
+            padding: 15px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #3a4049;
+        }
+
+        .report-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #3a4049;
+            font-size: 13px;
+        }
+
+        .report-table tbody tr:hover {
+            background: rgba(46, 204, 113, 0.05);
+        }
+
+        .report-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .stat-value {
+            color: #2ecc71;
+            font-weight: 700;
+        }
+
+        .status-ok {
+            color: #2ecc71;
+        }
+
+        .status-alert {
+            color: #e74c3c;
+        }
+
+        .status-under {
+            color: #3498db;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #2d333b 0%, #323841 100%);
+            border: 1px solid #3a4049;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-card-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .stat-card-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">KHORSHED METAL INDUSTRIES</div>
+        <div class="nav-links">
+            <a href="index.html">Monitor</a>
+            <a href="manage.html">Management</a>
+            <a href="report.html" class="active">Report</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="filter-title">📊 Report Filters (All Independent)</div>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label class="filter-label">Start Date</label>
+                    <input type="date" id="dateStart" onchange="updateReport()">
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">End Date</label>
+                    <input type="date" id="dateEnd" onchange="updateReport()">
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Select Shift</label>
+                    <select id="shiftFilter" onchange="updateReport()">
+                        <option value="">All Shifts</option>
+                        <option value="A">Shift A</option>
+                        <option value="G">Shift G</option>
+                        <option value="B">Shift B</option>
+                        <option value="C">Shift C</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Select Scale</label>
+                    <select id="scaleFilter" onchange="updateReport()"></select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Select Item</label>
+                    <select id="itemFilter" onchange="updateReport()"></select>
+                </div>
+            </div>
+            <button class="btn-export" onclick="exportToCSV()">📥 Export CSV</button>
+        </div>
+
+        <!-- Report Section -->
+        <div class="report-section">
+            <div class="report-title" id="reportHeading">📋 Filtered Report</div>
+            
+            <!-- Summary Stats -->
+            <div class="stats-summary" id="statsSummary"></div>
+
+            <!-- Report Content: Chart + Table -->
+            <div class="report-content">
+                <div class="chart-container">
+                    <div class="chart-title">📈 Weight Distribution Chart</div>
+                    <canvas id="chartCanvas"></canvas>
+                </div>
+                <div class="table-container">
+                    <div id="reportContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let devices = [];
+        let items = [];
+        let chartInstance = null;
+
+        // Initialize
+        window.addEventListener('load', async () => {
+            await loadDevices();
+            await loadItems();
+            populateScaleFilter();
+            populateItemFilter();
+            setDefaultDates();
+            updateReport();
+        });
+
+        async function loadDevices() {
+            try {
+                const res = await fetch(`api.php?action=list_devices&_ts=${Date.now()}`);
+                devices = await res.json() || [];
+                console.log('Devices loaded:', devices);
+            } catch (e) {
+                console.error('Load devices error:', e);
+            }
+        }
+
+        async function loadItems() {
+            try {
+                const res = await fetch(`api.php?action=list_items&_ts=${Date.now()}`);
+                items = await res.json() || [];
+                console.log('Items loaded:', items);
+            } catch (e) {
+                console.error('Load items error:', e);
+            }
+        }
+
+        function populateScaleFilter() {
+            const scaleSelect = document.getElementById('scaleFilter');
+            scaleSelect.innerHTML = '<option value="">All Scales</option>';
+            devices.forEach(d => {
+                if (d.machine_no > 0) {
+                    const option = document.createElement('option');
+                    option.value = d.machine_no;
+                    option.text = `Scale #${d.machine_no} - ${d.location_name || 'Unknown'}`;
+                    scaleSelect.appendChild(option);
+                }
+            });
+        }
+
+        function populateItemFilter() {
+            const itemSelect = document.getElementById('itemFilter');
+            itemSelect.innerHTML = '<option value="">All Items</option>';
+            items.forEach(i => {
+                if (i.id) {
+                    const option = document.createElement('option');
+                    option.value = i.id;
+                    option.text = i.name;
+                    itemSelect.appendChild(option);
+                }
+            });
+        }
+
+        function setDefaultDates() {
+            const today = new Date();
+            const startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            document.getElementById('dateStart').valueAsDate = startDate;
+            document.getElementById('dateEnd').valueAsDate = today;
+        }
+
+        // Helper function to get all dates in range
+        function getDateRange(startStr, endStr) {
+            const dates = [];
+            const start = new Date(startStr);
+            const end = new Date(endStr);
+            let current = new Date(start);
+            while (current <= end) {
+                const year = current.getFullYear();
+                const month = String(current.getMonth() + 1).padStart(2, '0');
+                const day = String(current.getDate()).padStart(2, '0');
+                dates.push(`${year}-${month}-${day}`);
+                current.setDate(current.getDate() + 1);
+            }
+            return dates;
+        }
+
+        async function updateReport() {
+            const startDate = document.getElementById('dateStart').value;
+            const endDate = document.getElementById('dateEnd').value;
+            const shift = document.getElementById('shiftFilter').value;
+            const scaleId = document.getElementById('scaleFilter').value;
+            const itemId = document.getElementById('itemFilter').value;
+
+            // Determine which machines to include
+            let filteredMachines = [];
+            if (scaleId) {
+                filteredMachines = [parseInt(scaleId)];
+            } else if (shift) {
+                filteredMachines = devices.filter(d => {
+                    const saved = localStorage.getItem(`shift-${d.machine_no}`);
+                    return saved === shift;
+                }).map(d => d.machine_no);
+            } else {
+                filteredMachines = devices.filter(d => d.machine_no > 0).map(d => d.machine_no);
+            }
+
+            if (filteredMachines.length === 0) {
+                document.getElementById('reportContainer').innerHTML = '<div class="empty-message">No machines found for selected filters</div>';
+                document.getElementById('statsSummary').innerHTML = '';
+                return;
+            }
+
+            await fetchAndDisplayData(filteredMachines, startDate, endDate, itemId, shift);
+        }
+
+        async function fetchAndDisplayData(machineIds, startDate, endDate, itemId, shift) {
+            try {
+                // Get all dates in range
+                const dateRange = getDateRange(startDate, endDate);
+                const data = [];
+
+                // Fetch data for each date and each machine
+                for (const machineId of machineIds) {
+                    for (const date of dateRange) {
+                        let url = `api.php?action=fetch_summary&machine_no=${machineId}&date=${date}&_ts=${Date.now()}`;
+                        if (itemId) url += `&item_id=${itemId}`;
+                        
+                        const res = await fetch(url);
+                        const result = await res.json();
+                        
+                        if (result.history && result.history.length > 0) {
+                            data.push({
+                                machine_no: machineId,
+                                date: date,
+                                history: result.history,
+                                latest: result.latest
+                            });
+                        }
+                    }
+                }
+
+                displayReport(data, startDate, endDate, itemId, shift);
+            } catch (e) {
+                console.error('Fetch data error:', e);
+                document.getElementById('reportContainer').innerHTML = '<div class="empty-message">Error loading data</div>';
+            }
+        }
+
+        function displayReport(data, startDate, endDate, itemId, shift) {
+            let totalCount = 0;
+            let perfectCount = 0;
+            let underCount = 0;
+            let overCount = 0;
+            let totalWeight = 0;
+
+            const rows = [];
+            const chartData = {}; // For grouping by item
+
+            console.log('displayReport called with data:', data);
+
+            data.forEach(machineData => {
+                const machine = devices.find(d => d.machine_no === machineData.machine_no);
+                const machineName = machine ? `Scale #${machine.machine_no} - ${machine.location_name || 'Unknown'}` : `Scale #${machineData.machine_no}`;
+                
+                if (!machineData.history || machineData.history.length === 0) {
+                    console.warn(`No history for machine ${machineData.machine_no}`);
+                    return;
+                }
+
+                console.log(`Processing machine ${machineData.machine_no}, history records: ${machineData.history.length}`);
+
+                machineData.history.forEach(record => {
+                    const weight = parseFloat(record.weight);
+                    const recItemId = record.item_id || machineData.latest?.item_id;
+                    
+                    const item = items.find(i => i.id == recItemId);
+                    const itemName = item ? item.name : `Item #${recItemId}`;
+                    const std = parseFloat(item ? item.standard_weight : 0);
+                    const tol = parseFloat(item ? item.tolerance : 0);
+
+                    let status = 'OK';
+                    if (weight > (std + tol)) status = 'Over';
+                    else if (weight < (std - tol)) status = 'Under';
+
+                    rows.push({
+                        machine: machineName,
+                        item: itemName,
+                        weight: weight.toFixed(2),
+                        std: std.toFixed(2),
+                        tolerance: tol.toFixed(2),
+                        status: status,
+                        time: record.created_at
+                    });
+
+                    // Group for chart
+                    if (!chartData[itemName]) {
+                        chartData[itemName] = [];
+                    }
+                    chartData[itemName].push(weight);
+
+                    totalCount++;
+                    totalWeight += weight;
+                    if (status === 'OK') perfectCount++;
+                    else if (status === 'Under') underCount++;
+                    else if (status === 'Over') overCount++;
+                });
+            });
+
+            console.log('Chart data after processing:', chartData);
+            console.log('Total rows:', rows.length);
+
+            // Display stats
+            const statsSummary = `
+                <div class="stat-card">
+                    <div class="stat-card-label">Total Readings</div>
+                    <div class="stat-card-value">${totalCount}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Perfect Count</div>
+                    <div class="stat-card-value">${perfectCount}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Under Count</div>
+                    <div class="stat-card-value">${underCount}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Over Count</div>
+                    <div class="stat-card-value">${overCount}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Avg Weight</div>
+                    <div class="stat-card-value">${totalCount > 0 ? (totalWeight / totalCount).toFixed(2) : 0}g</div>
+                </div>
+            `;
+            document.getElementById('statsSummary').innerHTML = statsSummary;
+
+            // Display table
+            if (rows.length === 0) {
+                document.getElementById('reportContainer').innerHTML = '<div class="empty-message">No data found for selected filters</div>';
+                document.getElementById('chartCanvas').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('chartCanvas').style.display = 'block';
+            let tableHtml = `
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Machine</th>
+                            <th>Item</th>
+                            <th>Weight (g)</th>
+                            <th>Std ±Tol (g)</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            rows.forEach(row => {
+                const statusClass = row.status === 'OK' ? 'status-ok' : row.status === 'Under' ? 'status-under' : 'status-alert';
+                tableHtml += `
+                    <tr>
+                        <td>${row.machine}</td>
+                        <td>${row.item}</td>
+                        <td class="stat-value">${row.weight}</td>
+                        <td>${row.std}±${row.tolerance}</td>
+                        <td class="${statusClass}">${row.status}</td>
+                        <td>${row.time}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `</tbody></table>`;
+            document.getElementById('reportContainer').innerHTML = tableHtml;
+
+            // Display chart
+            renderChart(chartData);
+        }
+
+        function renderChart(chartData) {
+            console.log('Chart data:', chartData);
+            
+            const canvas = document.getElementById('chartCanvas');
+            if (!canvas) {
+                console.error('Canvas element not found!');
+                return;
+            }
+            
+            if (!chartData || Object.keys(chartData).length === 0) {
+                console.warn('No chart data provided');
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            const itemNames = Object.keys(chartData);
+            const colors = ['#2ecc71', '#3498db', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+            
+            // Calculate statistics for each item
+            const labels = [];
+            const avgData = [];
+            const minData = [];
+            const maxData = [];
+            
+            itemNames.forEach((itemName, idx) => {
+                const weights = chartData[itemName];
+                if (weights.length === 0) return;
+                
+                const avg = weights.reduce((a, b) => a + b, 0) / weights.length;
+                const min = Math.min(...weights);
+                const max = Math.max(...weights);
+                
+                labels.push(itemName.length > 15 ? itemName.substring(0, 15) + '...' : itemName);
+                avgData.push(avg);
+                minData.push(min);
+                maxData.push(max);
+            });
+
+            console.log('Chart labels:', labels);
+            console.log('Avg data:', avgData);
+
+            if (labels.length === 0) {
+                console.warn('No valid data for chart');
+                return;
+            }
+
+            // Destroy existing chart if it exists
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            try {
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Min Weight (g)',
+                                data: minData,
+                                borderColor: '#e74c3c',
+                                backgroundColor: '#e74c3c33',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Avg Weight (g)',
+                                data: avgData,
+                                borderColor: '#2ecc71',
+                                backgroundColor: '#2ecc7133',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Max Weight (g)',
+                                data: maxData,
+                                borderColor: '#f39c12',
+                                backgroundColor: '#f39c1233',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#e0e0e0',
+                                    font: { size: 12, weight: 'bold' },
+                                    padding: 15
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: '#888', font: { size: 11 } },
+                                grid: { color: '#333' },
+                                title: { display: true, text: 'Weight (g)', color: '#e0e0e0' }
+                            },
+                            x: {
+                                ticks: { color: '#888', font: { size: 11 } },
+                                grid: { color: '#333' }
+                            }
+                        }
+                    }
+                });
+                console.log('Chart rendered successfully');
+            } catch (err) {
+                console.error('Chart rendering error:', err);
+            }
+        }
+
+        function exportToCSV() {
+            const table = document.querySelector('.report-table');
+            if (!table) {
+                alert('No data to export');
+                return;
+            }
+
+            let csv = 'Machine,Item,Weight (g),Std ±Tol (g),Status,Time\n';
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const rowData = Array.from(cells).map(cell => `"${cell.innerText}"`).join(',');
+                csv += rowData + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `report-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

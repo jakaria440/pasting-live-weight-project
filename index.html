@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>HAMKO | Weight Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%); 
+            color: #e0e0e0; 
+            font-family: 'Segoe UI', 'Roboto', sans-serif; 
+            margin: 0; 
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        .navbar { 
+            background: linear-gradient(90deg, #1a1f2e 0%, #252d3a 100%);
+            padding: 20px 35px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border-bottom: 3px solid #43A047; 
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .nav-brand { 
+            font-size: 24px; 
+            font-weight: 700; 
+            color: #43A047;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(46, 204, 113, 0.3);
+        }
+        
+        .nav-links a { 
+            color: #999; 
+            text-decoration: none; 
+            margin-left: 30px; 
+            text-transform: uppercase; 
+            font-size: 12px; 
+            font-weight: 600;
+            transition: all 0.3s ease;
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+        
+        .nav-links a:hover { 
+            color: #43A047;
+            background: rgba(46, 204, 113, 0.1);
+        }
+        
+        .nav-links a.active { 
+            color: #43A047;
+            border-bottom: 2px solid #43A047;
+        }
+        
+        .grid-container { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 25px; 
+            padding: 0 35px 30px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 1200px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .scale-card { 
+            background: linear-gradient(135deg, #1a1f2e 0%, #252d3a 100%);
+            border: 1px solid #333;
+            border-radius: 16px; 
+            padding: 25px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scale-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(46, 204, 113, 0.15);
+            border-color: #43A047;
+        }
+        
+        .scale-card.alarm { 
+            border-color: #ff3333;
+            background: linear-gradient(135deg, #3a0000 0%, #2d1a1a 100%);
+            box-shadow: 0 8px 24px rgba(255, 51, 51, 0.2);
+        }
+        
+        .scale-card.alarm:hover {
+            box-shadow: 0 12px 32px rgba(255, 51, 51, 0.25);
+        }
+        
+        .scale-card > div:first-child {
+            font-size: 13px; 
+            color: #888; 
+            margin-bottom: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .controls { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px;
+        }
+        
+        select, input[type="date"] { 
+            background: #2d333b; 
+            color: white; 
+            border: 1px solid #444;
+            border-radius: 8px; 
+            padding: 10px 12px; 
+            flex: 1; 
+            font-size: 12px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        select:hover, input[type="date"]:hover {
+            border-color: #43A047;
+            background: #323841;
+        }
+        
+        select:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #43A047;
+            box-shadow: 0 0 8px rgba(46, 204, 113, 0.2);
+        }
+        
+        .sync-btn { 
+            background: linear-gradient(135deg, #43A047 0%, #27ae60 100%);
+            color: white; 
+            border: none; 
+            padding: 10px 16px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: 700; 
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+        }
+        
+        .sync-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(46, 204, 113, 0.4);
+        }
+        
+        .sync-btn:active {
+            transform: translateY(0);
+        }
+        
+        .weight-val { 
+            font-size: 56px; 
+            font-weight: 700; 
+            text-align: center; 
+            color: #43A047;
+            margin: 20px 0;
+            text-shadow: 0 2px 8px rgba(46, 204, 113, 0.2);
+        }
+        
+        /* Bar Display Styles */
+        .bar-display-container { 
+            margin-top: 24px; 
+            border-top: 1px solid #3a4049; 
+            padding-top: 16px;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .chart-panel {
+            background: linear-gradient(135deg, #2d333b 0%, #323841 100%);
+            border: 1px solid #3a4049;
+            border-radius: 12px;
+            padding: 10px;
+            min-height: 150px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .bar-display-title { 
+            font-size: 12px; 
+            color: #888; 
+            text-transform: uppercase; 
+            margin-bottom: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .color-legend {
+            display: flex;
+            gap: 12px;
+            font-size: 10px;
+            margin-left: auto;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .legend-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .legend-box.perfect {
+            background: #43A047;
+        }
+        
+        .legend-box.under {
+            background: #FBC02D;
+        }
+        
+        .legend-box.over {
+            background: #e74c3c;
+        }
+        
+        .bar-chart { 
+            position: relative; 
+            height: 110px; 
+            background: transparent;
+            border-radius: 12px; 
+            padding: 8px 6px; 
+            display: flex; 
+            align-items: flex-end; 
+            gap: 3px; 
+            overflow-x: auto;
+            box-shadow: none;
+            overflow-y: hidden;
+        }
+
+        .trend-chart-wrap {
+            height: 110px;
+            position: relative;
+            width: 100%;
+        }
+
+        .trend-canvas {
+            width: 100%;
+            height: 100%;
+            max-height: 110px;
+            display: block;
+        }
+        
+        .bar { 
+            flex: 1; 
+            min-width: 14px; 
+            border-radius: 4px 4px 0 0; 
+            position: relative; 
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .bar.ok { 
+            background: linear-gradient(180deg, #43A047 0%, #27ae60 100%);
+        }
+        
+        .bar.ok:hover {
+            transform: scaleY(1.05);
+            box-shadow: 0 3px 8px rgba(46, 204, 113, 0.3);
+        }
+        
+        .bar.under { 
+            background: linear-gradient(180deg, #FBC02D 0%, #FBC02D 100%);
+        }
+        
+        .bar.under:hover {
+            transform: scaleY(1.05);
+            box-shadow: 0 3px 8px rgba(241, 196, 15, 0.3);
+        }
+        
+        .bar.over { 
+            background: linear-gradient(180deg, #F44336 0%, #F44336 100%);
+        }
+        
+        .bar.over:hover {
+            transform: scaleY(1.05);
+            box-shadow: 0 3px 8px rgba(231, 76, 60, 0.3);
+        }
+        
+        .bar.alert:hover {
+            transform: scaleY(1.05);
+            box-shadow: 0 3px 8px rgba(231, 76, 60, 0.3);
+        }
+        
+        .standard-line { 
+            position: absolute; 
+            width: 100%; 
+            height: 2px; 
+            background: #3498db; 
+            opacity: 0.7;
+            box-shadow: 0 0 4px rgba(52, 152, 219, 0.4);
+        }
+        
+        .bar-tooltip { 
+            font-size: 7px; 
+            position: absolute; 
+            bottom: 100%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            white-space: nowrap; 
+            color: #fff;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 4px;
+            border-radius: 3px; 
+            font-weight: 500;
+            border: 0.5px solid #43A047;
+            z-index: 10;
+            line-height: 1.1;
+            margin-bottom: 2px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .bar:hover .bar-tooltip {
+            opacity: 1;
+        }
+        
+        /* Statistics Styles */
+        .statistics-container { 
+            margin-top: 24px; 
+            background: linear-gradient(135deg, #252d3a 0%, #2d333b 100%);
+            border: 1px solid #3a4049;
+            border-radius: 12px; 
+            padding: 20px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .statistics-title { 
+            font-size: 12px; 
+            color: #43A047; 
+            text-transform: uppercase; 
+            font-weight: 700; 
+            margin-bottom: 18px;
+            letter-spacing: 1px;
+        }
+        
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 14px;
+        }
+        
+        .stat-box { 
+            background: linear-gradient(135deg, #1a1f2e 0%, #242b38 100%);
+            border: 1px solid #3a4049;
+            border-radius: 10px; 
+            padding: 16px;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #43A047 0%, #3498db 50%, #e74c3c 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .stat-box:hover {
+            transform: translateY(-3px);
+            border-color: #43A047;
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.15);
+        }
+        
+        .stat-box:hover::before {
+            opacity: 1;
+        }
+        
+        .stat-label { 
+            font-size: 10px; 
+            color: #888; 
+            text-transform: uppercase; 
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        
+        .stat-value { 
+            font-size: 22px; 
+            font-weight: 700; 
+            color: #43A047;
+            text-shadow: 0 1px 3px rgba(46, 204, 113, 0.2);
+        }
+        
+        .stat-subtext { 
+            font-size: 9px; 
+            color: #666; 
+            margin-top: 4px;
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2d333b;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #43A047;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #27ae60;
+        }
+        
+        /* Light Mode Styles */
+        body.light-mode {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            color: #333;
+        }
+        
+        body.light-mode .navbar {
+            background: linear-gradient(90deg, #ffffff 0%, #f0f4f8 100%);
+            border-bottom-color: #3498db;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        body.light-mode .nav-brand {
+            color: #3498db;
+            text-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
+        }
+        
+        body.light-mode .nav-links a {
+            color: #666;
+        }
+        
+        body.light-mode .nav-links a:hover {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        body.light-mode .nav-links a.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+        
+        body.light-mode .scale-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
+            border-color: #ddd;
+        }
+        
+        body.light-mode .scale-card:hover {
+            box-shadow: 0 12px 32px rgba(52, 152, 219, 0.1);
+            border-color: #3498db;
+        }
+        
+        body.light-mode .scale-card > div:first-child {
+            color: #666;
+        }
+        
+        body.light-mode select,
+        body.light-mode input[type="date"] {
+            background: #f0f4f8;
+            color: #333;
+            border-color: #ddd;
+        }
+        
+        body.light-mode select:hover,
+        body.light-mode input[type="date"]:hover {
+            border-color: #3498db;
+            background: #e8ecf1;
+        }
+        
+        body.light-mode .weight-val {
+            color: #3498db;
+            text-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
+        }
+        
+        body.light-mode .bar-chart {
+            background: transparent;
+            box-shadow: none;
+        }
+
+        body.light-mode .chart-panel {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e8ecf1 100%);
+            border-color: #d7dde5;
+        }
+        
+        body.light-mode .bar-display-title,
+        body.light-mode .statistics-title {
+            color: #3498db;
+        }
+        
+        body.light-mode .statistics-container {
+            background: linear-gradient(135deg, #f8fafb 0%, #f0f4f8 100%);
+            border-color: #ddd;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+        
+        body.light-mode .stat-box {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
+            border-color: #ddd;
+        }
+        
+        body.light-mode .stat-box:hover {
+            border-color: #3498db;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.1);
+        }
+        
+        body.light-mode .stat-label {
+            color: #666;
+        }
+        
+        body.light-mode .stat-value {
+            color: #3498db;
+            text-shadow: 0 1px 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        body.light-mode ::-webkit-scrollbar-track {
+            background: #e8ecf1;
+        }
+        
+        body.light-mode ::-webkit-scrollbar-thumb {
+            background: #3498db;
+        }
+        
+        body.light-mode ::-webkit-scrollbar-thumb:hover {
+            background: #2980b9;
+        }
+        
+        /* Control Buttons */
+        .navbar-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .control-btn {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+            border: 1px solid #3498db;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        body.dark-mode .control-btn {
+            background: rgba(46, 204, 113, 0.2);
+            color: #43A047;
+            border-color: #43A047;
+        }
+        
+        .control-btn:hover {
+            background: rgba(52, 152, 219, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.2);
+        }
+        
+        body.dark-mode .control-btn:hover {
+            background: rgba(46, 204, 113, 0.3);
+            box-shadow: 0 4px 8px rgba(46, 204, 113, 0.2);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Fit Screen Mode Styles */
+        body.fit-screen-mode .scale-card {
+            padding: 12px;
+        }
+        
+        body.fit-screen-mode .scale-card > div:first-child {
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+        
+        body.fit-screen-mode .controls {
+            margin-bottom: 10px;
+            gap: 6px;
+        }
+        
+        body.fit-screen-mode select,
+        body.fit-screen-mode input[type="date"] {
+            padding: 6px 8px;
+            font-size: 11px;
+        }
+        
+        body.fit-screen-mode .sync-btn {
+            padding: 6px 10px;
+            font-size: 10px;
+        }
+        
+        body.fit-screen-mode .weight-val {
+            font-size: 40px;
+            margin: 0 0 8px 0;
+        }
+        
+        body.fit-screen-mode .bar-display-container {
+            margin-top: 12px;
+            padding-top: 8px;
+        }
+        
+        body.fit-screen-mode .bar-chart {
+            height: 90px;
+            padding: 6px 4px;
+        }
+
+        body.fit-screen-mode .chart-panel {
+            min-height: 130px;
+            padding: 8px;
+        }
+
+        body.fit-screen-mode .trend-chart-wrap {
+            height: 90px;
+        }
+
+        @media (max-width: 900px) {
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        body.fit-screen-mode .statistics-container {
+            margin-top: 12px;
+            padding: 12px;
+        }
+        
+        body.fit-screen-mode .stats-grid {
+            gap: 8px;
+        }
+        
+        body.fit-screen-mode .stat-box {
+            padding: 10px;
+        }
+        
+        body.fit-screen-mode .stat-label {
+            font-size: 8px;
+            margin-bottom: 4px;
+        }
+        
+        body.fit-screen-mode .stat-value {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">KHORSHED METAL INDUSTRIES</div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div class="nav-links">
+                <a href="index.html" class="active">Monitor</a>
+                <a href="manage.html">Management</a>
+                <a href="#" onclick="openReportMenu(); return false;">Report</a>
+            </div>
+            <div class="navbar-controls">
+                <button class="control-btn" id="theme-btn" onclick="toggleTheme()"><span style="font-size: 14px;">☀</span> Light/Dark</button>
+                <button class="control-btn" id="fullscreen-btn" onclick="toggleFullscreen()"><span style="font-size: 14px;">⛶</span> Fullscreen</button>
+                <button class="control-btn" id="fit-screen-btn" onclick="toggleFitScreen()"><span style="font-size: 14px;">⊡</span> Fit Screen</button>
+            </div>
+        </div>
+    </nav>
+    <div style="text-align: center; padding: 15px 0; font-size: 18px; font-weight: 600; color: #43A047; letter-spacing: 0.5px;">PASTING WEIGHT MONITORING SYSTEM</div>
+    <div id="grid" class="grid-container"></div>
+
+    <script>
+        const devices = []; 
+        let itemListHtml = "";
+        let itemsList = []; // Store items list for lookup
+        const machineRenderState = {};
+        const machineLatestIds = {};
+        const machineRefreshLock = {};
+        
+        // Theme Toggle Function
+        function toggleTheme() {
+            const body = document.body;
+            const themeBtn = document.getElementById('theme-btn');
+            
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                themeBtn.innerHTML = '<span style="font-size: 14px;">☀</span> Light/Dark';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.add('light-mode');
+                body.classList.remove('dark-mode');
+                themeBtn.innerHTML = '<span style="font-size: 14px;">☀</span> Light/Dark';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+        
+        // Fullscreen Toggle Function
+        function toggleFullscreen() {
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {
+                    alert('Fullscreen not supported on this browser');
+                });
+                fullscreenBtn.innerHTML = '<span style="font-size: 14px;">⛶</span> Exit Fullscreen';
+            } else {
+                document.exitFullscreen();
+                fullscreenBtn.innerHTML = '<span style="font-size: 14px;">⛶</span> Fullscreen';
+            }
+        }
+        
+        // Fit to Screen Toggle Function
+        function toggleFitScreen() {
+            const body = document.body;
+            const gridContainer = document.querySelector('.grid-container');
+            const fitScreenBtn = document.getElementById('fit-screen-btn');
+            const navbar = document.querySelector('.navbar');
+            const title = document.querySelector('[style*="text-align: center"]');
+            
+            if (body.classList.contains('fit-screen-mode')) {
+                // Return to normal layout
+                body.classList.remove('fit-screen-mode');
+                gridContainer.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                gridContainer.style.gap = '25px';
+                gridContainer.style.padding = '0 35px 30px';
+                navbar.style.padding = '20px 35px';
+                title.style.padding = '15px 0';
+                fitScreenBtn.innerHTML = '<span style="font-size: 14px;">⊟</span> Fit Screen';
+                localStorage.setItem('gridLayout', '2col');
+            } else {
+                // Switch to compact fit-screen layout
+                body.classList.add('fit-screen-mode');
+                gridContainer.style.gridTemplateColumns = '1fr';
+                gridContainer.style.gap = '12px';
+                gridContainer.style.padding = '0 15px 15px';
+                navbar.style.padding = '10px 15px';
+                title.style.padding = '8px 0';
+                title.style.fontSize = '14px';
+                fitScreenBtn.innerHTML = '<span style="font-size: 14px;">⊞</span> Normal';
+                localStorage.setItem('gridLayout', 'fit');
+            }
+        }
+        
+        // Initialize theme from localStorage
+        window.addEventListener('load', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const body = document.body;
+            const themeBtn = document.getElementById('theme-btn');
+            
+            if (savedTheme === 'light') {
+                body.classList.add('light-mode');
+                themeBtn.innerHTML = '<span style="font-size: 14px;">☀</span> Light/Dark';
+            } else {
+                body.classList.add('dark-mode');
+                themeBtn.innerHTML = '<span style="font-size: 14px;">☀</span> Light/Dark';
+            }
+            
+            // Restore grid layout preference
+            const savedLayout = localStorage.getItem('gridLayout') || '2col';
+            const gridContainer = document.querySelector('.grid-container');
+            const fitScreenBtn = document.getElementById('fit-screen-btn');
+            
+            if (savedLayout === 'fit') {
+                body.classList.add('fit-screen-mode');
+                gridContainer.style.gridTemplateColumns = '1fr';
+                gridContainer.style.gap = '12px';
+                gridContainer.style.padding = '0 15px 15px';
+                const navbar = document.querySelector('.navbar');
+                navbar.style.padding = '10px 15px';
+                const title = document.querySelector('[style*="text-align: center"]');
+                title.style.padding = '8px 0';
+                title.style.fontSize = '14px';
+                fitScreenBtn.innerHTML = '<span style="font-size: 14px;">⊞</span> Normal';
+            }
+        });
+        
+        // Listen for fullscreen changes
+        document.addEventListener('fullscreenchange', () => {
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            if (!document.fullscreenElement) {
+                fullscreenBtn.innerHTML = '<span style="font-size: 14px;">⛶</span> Fullscreen';
+            }
+        });
+
+        function updateBarDisplay(m, history, tar, tol) {
+            const barChart = document.getElementById(`bar-chart-${m}`);
+            const stdLine = document.getElementById(`std-line-${m}`);
+            
+            if (!barChart || !stdLine) return;
+            
+            // Clear all children from barChart except stdLine
+            barChart.innerHTML = '';
+            barChart.appendChild(stdLine);
+            
+            if (!history || history.length === 0) {
+                stdLine.style.display = 'none';
+                return;
+            }
+            
+            stdLine.style.display = 'block';
+            
+            // Get last 10 items in chronological order
+            const reversedHistory = history.slice().reverse();
+            const last10History = reversedHistory.slice(-10);
+            const last10Weights = last10History.map(h => Number.isFinite(parseFloat(h.weight)) ? parseFloat(h.weight) : 0);
+            const last10Times = last10History.map(h => h.created_at);
+            
+            if (last10Weights.length === 0) {
+                stdLine.style.display = 'none';
+                return;
+            }
+            
+            // Calculate range for last 10 items
+            const last10Min = Math.min(...last10Weights, tar - tol);
+            const last10Max = Math.max(...last10Weights, tar + tol);
+            const last10Range = last10Max - last10Min;
+            
+            last10Weights.forEach((weight, idx) => {
+                const safeWeight = Number.isFinite(weight) ? weight : 0;
+                const heightPercent = last10Range > 0 ? ((safeWeight - last10Min) / last10Range) * 100 : 50;
+                
+                // Determine status: ok, under, or over
+                let barStatus = 'ok';
+                if (Number.isFinite(tar) && Number.isFinite(tol)) {
+                    if (Math.abs(safeWeight - tar) <= tol) {
+                        barStatus = 'ok';
+                    } else if (safeWeight < (tar - tol)) {
+                        barStatus = 'under';
+                    } else {
+                        barStatus = 'over';
+                    }
+                }
+                
+                let timeStr = '';
+                if (last10Times[idx]) {
+                    const timeMatch = String(last10Times[idx]).match(/(\d{2}):(\d{2}):(\d{2})/);
+                    if (timeMatch) {
+                        timeStr = `${timeMatch[1]}:${timeMatch[2]}`;
+                    }
+                }
+                
+                const barWrapper = document.createElement('div');
+                barWrapper.style.display = 'flex';
+                barWrapper.style.flexDirection = 'column';
+                barWrapper.style.flex = '1';
+                barWrapper.style.alignItems = 'center';
+                barWrapper.style.justifyContent = 'flex-end';
+                barWrapper.style.height = '100%';
+                barWrapper.style.minWidth = '12px';
+                
+                const bar = document.createElement('div');
+                bar.className = `bar ${barStatus}`;
+                bar.style.width = '100%';
+                bar.style.height = Math.max(heightPercent, 3) + '%';
+                bar.style.minHeight = '3px';
+                bar.style.borderRadius = '4px 4px 0 0';
+                bar.style.cursor = 'pointer';
+                bar.title = `${timeStr}: ${safeWeight.toFixed(2)}g`;
+                
+                const tooltip = document.createElement('div');
+                tooltip.className = 'bar-tooltip';
+                tooltip.innerHTML = `${timeStr}<br>${safeWeight.toFixed(1)}g`;
+                
+                bar.appendChild(tooltip);
+                barWrapper.appendChild(bar);
+                barChart.appendChild(barWrapper);
+            });
+            
+            // Position standard line
+            if (last10Range > 0) {
+                const stdLinePercent = ((tar - last10Min) / last10Range) * 100;
+                stdLine.style.bottom = stdLinePercent + '%';
+            } else {
+                stdLine.style.bottom = '50%';
+            }
+        }
+
+        async function loadItems() {
+            const res = await fetch('api.php?action=list_items');
+            const items = await res.json();
+            itemsList = items; // Store for lookup
+            itemListHtml = '<option value="">Filter Item...</option>';
+            items.forEach(i => itemListHtml += `<option value="${i.id}">${i.name}</option>`);
+        }
+
+        async function onItemChange(m) {
+            // When item dropdown changes, clear cache and refresh display
+            // This does NOT sync to database - only updates frontend display
+            const itemId = document.getElementById(`item-sel-${m}`)?.value;
+            
+            if (!itemId) {
+                // Item was cleared, reset display
+                document.getElementById(`current-item-${m}`).innerText = '--';
+                // Reset weight display
+                const wEl = document.getElementById(`w-${m}`);
+                if (wEl) wEl.innerText = '0.00g';
+                const wtEl = document.getElementById(`w-time-${m}`);
+                if (wtEl) wtEl.innerText = '--:--';
+                const wsEl = document.getElementById(`w-status-${m}`);
+                if (wsEl) wsEl.innerText = '--';
+                return;
+            }
+            
+            // Clear render state to force a fresh fetch
+            // Make absolutely sure lock is released
+            machineRefreshLock[m] = false;
+            machineRenderState[m] = { 
+                lastDataKey: '', 
+                lastFilterKey: '',
+                chartInitialized: false 
+            };
+            
+            // Update the item name display
+            const foundItem = itemsList.find(item => item.id == itemId);
+            const itemName = foundItem ? foundItem.name : '--';
+            const itemDisplay = document.getElementById(`current-item-${m}`);
+            if (itemDisplay) {
+                itemDisplay.innerText = itemName;
+            }
+            
+            // Refresh data to show selected item's information
+            // Wait for refresh to complete before returning
+            try {
+                await refreshData(m);
+            } catch (e) {
+                console.error(`Error refreshing data for machine ${m}:`, e);
+                // Even on error, ensure weight is visible
+                const weightEl = document.getElementById(`w-${m}`);
+                if (weightEl && weightEl.innerText === '') {
+                    weightEl.innerText = '0.00g';
+                }
+            }
+        }
+
+        async function syncToMachine(m) {
+            const itemId = document.getElementById(`item-sel-${m}`).value;
+            if(!itemId) return alert("Select an item first!");
+            try {
+                // Use fresh fetch to bypass cache
+                const res = await fetchFreshJson(`api.php?action=set_active_item&item_id=${itemId}&machine_no=${m}`);
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    // Find the item name from itemsList and update display
+                    const foundItem = itemsList.find(item => item.id == itemId);
+                    const itemName = foundItem ? foundItem.name : `Item #${itemId}`;
+                    
+                    alert(`Scale #${m} synced to: ${itemName}`);
+                    
+                    // Update current-item display immediately to show what was synced
+                    document.getElementById(`current-item-${m}`).innerText = itemName;
+                    
+                    // Completely clear the render state cache
+                    machineRefreshLock[m] = false;
+                    machineRenderState[m] = { 
+                        lastDataKey: '', 
+                        lastFilterKey: '',
+                        chartInitialized: false 
+                    };
+                    
+                    // Fetch latest data (no item filter) to get the current weight of newly synced item
+                    try {
+                        const today = new Date().toISOString().split('T')[0];
+                        const freshRes = await fetchFreshJson(`api.php?action=fetch_summary&machine_no=${m}&item_id=${itemId}&date=${today}`);
+                        const freshData = await freshRes.json();
+                        
+                        if (freshData && freshData.latest) {
+                            // Update weight display with newly synced item's data
+                            const cur = parseFloat(freshData.latest.weight);
+                            const tar = parseFloat(freshData.latest.standard_weight) || 0;
+                            const tol = parseFloat(freshData.latest.tolerance) || 0;
+                            
+                            if (Number.isFinite(cur)) {
+                                document.getElementById(`w-${m}`).innerText = cur.toFixed(2) + "g";
+                            }
+                            
+                            // Update time
+                            let timeStr = '--:--';
+                            if (freshData.latest.created_at) {
+                                const match = String(freshData.latest.created_at).match(/(\d{2}):(\d{2}):(\d{2})/);
+                                if (match) timeStr = `${match[1]}:${match[2]}`;
+                            }
+                            document.getElementById(`w-time-${m}`).innerText = timeStr;
+                            
+                            // Update status
+                            const status = cur > (tar + tol) ? 'Over' : cur < (tar - tol) ? 'Under' : 'Perfect';
+                            const statusEl = document.getElementById(`w-status-${m}`);
+                            statusEl.innerText = status;
+                            statusEl.style.color = status === 'Perfect' ? '#43A047' : '#e74c3c';
+                        }
+                    } catch (e) {
+                        console.error(`Failed to fetch fresh data after sync for scale ${m}:`, e);
+                    }
+                    
+                    // Now refresh the full data display
+                    setTimeout(() => {
+                        refreshData(m);
+                    }, 100);
+                } else {
+                    alert(data.message || `Failed to sync scale #${m}`);
+                }
+            } catch (e) {
+                alert(`Failed to sync scale #${m}: ` + e.message);
+            }
+        }
+
+        function refreshDataWithRetry(m, retries = 3, delay = 250) {
+            if (!machineRefreshLock[m]) {
+                refreshData(m);
+                return;
+            }
+            if (retries <= 0) return;
+            setTimeout(() => refreshDataWithRetry(m, retries - 1, delay), delay);
+        }
+
+        function saveAndRefresh(m) {
+            refreshData(m);
+        }
+
+        async function loadDevices() {
+            const res = await fetch('api.php?action=list_devices');
+            const data = await res.json();
+            const grid = document.getElementById('grid');
+            data.forEach(d => {
+                // Validate machine_no - skip invalid devices
+                const machineNo = parseInt(d.machine_no);
+                if (!Number.isFinite(machineNo) || machineNo <= 0) {
+                    console.warn('Invalid machine_no:', d.machine_no);
+                    return; // Skip invalid machines
+                }
+                
+                devices.push(machineNo);
+                grid.innerHTML += `
+                    <div id="card-${machineNo}" class="scale-card">
+                        <div style="font-size:12px; color:#666; margin-bottom:10px;">SCALE #${machineNo} - ${d.location_name || 'Unknown'}</div>
+                        <div class="controls">
+                            <select id="shift-sel-${machineNo}" onchange="saveShift(${machineNo})">
+                                <option value="">-- Shift --</option>
+                                <option value="A">Shift A</option>
+                                 <option value="G">Shift G</option>
+                                <option value="B">Shift B</option>
+                                <option value="C">Shift C</option>
+                            </select>
+                            <select id="item-sel-${machineNo}" onchange="onItemChange(${machineNo})">
+                                ${itemListHtml}
+                            </select>
+                            <button class="sync-btn" onclick="syncToMachine(${machineNo})">SYNC</button>
+                            <input type="date" id="date-sel-${machineNo}" onchange="saveAndRefresh(${machineNo})">
+                        </div>
+                        <div style="background: linear-gradient(135deg, #2d333b 0%, #323841 100%); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #3a4049;">
+                            <div style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 10px;">Current Weight:<div style="font-size: 16px; font-weight: 700; color: #43A047; margin-bottom: 12px;" id="current-item-${machineNo}">--</div></div>
+                            <div class="weight-val" id="w-${machineNo}" style="margin: 0 0 12px 0; font-size: 56px;">0.00g</div>
+                            <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+                                <div>
+                                    <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 4px;">Reading Time</div>
+                                    <div style="font-size: 14px; font-weight: 600; color: #43A047;" id="w-time-${machineNo}">--:--</div>
+                                </div>
+                                <div style="width: 1px; height: 30px; background: #3a4049;"></div>
+                                <div>
+                                    <div style="font-size: 10px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 4px;">Status</div>
+                                    <div style="font-size: 14px; font-weight: 600; color: #43A047;" id="w-status-${machineNo}">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bar-display-container">
+                            <div class="charts-row">
+                                <div class="chart-panel">
+                                    <div class="bar-display-title">
+                                        <span>Bars (Last 10)</span>
+                                        <div class="color-legend">
+                                            <div class="legend-item">
+                                                <div class="legend-box perfect"></div>
+                                                <span>Perfect</span>
+                                            </div>
+                                            <div class="legend-item">
+                                                <div class="legend-box under"></div>
+                                                <span>Under</span>
+                                            </div>
+                                            <div class="legend-item">
+                                                <div class="legend-box over"></div>
+                                                <span>Over</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bar-chart" id="bar-chart-${machineNo}" style="position: relative;">
+                                        <div class="standard-line" id="std-line-${machineNo}"></div>
+                                    </div>
+                                </div>
+                                <div class="chart-panel">
+                                    <div class="bar-display-title">Trend: Standard vs Weight</div>
+                                    <div class="trend-chart-wrap">
+                                        <canvas class="trend-canvas" id="trend-chart-${machineNo}" width="400" height="110"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="statistics-container">
+                            <div class="statistics-title">Statistics</div>
+                            <div class="stats-grid">
+                                <div class="stat-box">
+                                    <div class="stat-label">Std Weight & Tolerance</div>
+                                    <div class="stat-value" id="stat-std-${machineNo}">--</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Total Raw Material</div>
+                                    <div class="stat-value" id="stat-total-${machineNo}">--</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Status</div>
+                                    <div class="stat-value" id="stat-status-${machineNo}">--</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Total Weighted</div>
+                                    <div class="stat-value" id="stat-total-weighted-${machineNo}">0</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Average Weight/Item</div>
+                                    <div class="stat-value" id="stat-avg-item-${machineNo}">--</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Under Count</div>
+                                    <div class="stat-value" id="stat-under-${machineNo}">0</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Perfect Count</div>
+                                    <div class="stat-value" id="stat-perfect-${machineNo}">0</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Over Count</div>
+                                    <div class="stat-value" id="stat-over-${machineNo}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                
+                // Use requestAnimationFrame to ensure DOM is ready before initializing chart
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        initChart(machineNo);
+                    }, 10);
+                });
+                
+                // Auto-select latest item and today's date
+                const today = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD
+                document.getElementById(`date-sel-${machineNo}`).value = today;
+                
+                // Fetch latest item info and auto-select
+                (async () => {
+                    const res = await fetchFreshJson(`api.php?action=fetch_summary&machine_no=${machineNo}&date=${today}`);
+                    const data = await res.json();
+                    
+                    // Use active_item_id from device data if available, otherwise use latest from API
+                    let activeItemId = d.active_item_id || (data.latest ? data.latest.item_id : null);
+                    
+                    if (activeItemId) {
+                        const itemSelectElem = document.getElementById(`item-sel-${machineNo}`);
+                        itemSelectElem.value = activeItemId;
+                        
+                        // Get item name from itemsList
+                        const foundItem = itemsList.find(item => item.id == activeItemId);
+                        const itemName = foundItem ? foundItem.name : '--';
+                        document.getElementById(`current-item-${machineNo}`).innerText = itemName;
+                    }
+                    refreshData(machineNo);
+                })();
+            });
+        }
+
+        function getTodayLocalDate() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function freshApiUrl(url) {
+            const separator = url.includes('?') ? '&' : '?';
+            return `${url}${separator}_ts=${Date.now()}`;
+        }
+
+        async function fetchFreshJson(url) {
+            return fetch(freshApiUrl(url), { cache: 'no-store' });
+        }
+
+        async function refreshData(m) {
+            if (machineRefreshLock[m]) {
+                console.log(`Skip refreshData for machine ${m}: locked`);
+                return;
+            }
+            machineRefreshLock[m] = true;
+
+            try {
+                const itemId = document.getElementById(`item-sel-${m}`).value;
+                const date = document.getElementById(`date-sel-${m}`).value;
+                console.log(`refreshData m${m}: itemId=${itemId}, date=${date}`);
+            
+                // Display selected item name from itemsList
+                let itemName = '--';
+                if (itemId) {
+                    const foundItem = itemsList.find(item => item.id == itemId);
+                    itemName = foundItem ? foundItem.name : '--';
+                }
+                document.getElementById(`current-item-${m}`).innerText = itemName;
+
+            const state = machineRenderState[m] || { lastDataKey: '', lastFilterKey: '' };
+            const filterKey = `${itemId || 'all'}|${date || ''}`;
+            const filterChanged = state.lastFilterKey !== filterKey;
+
+            let data;
+            try {
+                const res = await fetchFreshJson(`api.php?action=fetch_summary&machine_no=${m}&item_id=${itemId}&date=${date}`);
+                data = await res.json();
+            } catch (e) {
+                console.error('refreshData fetch error:', e);
+                return;
+            }
+
+            // If selected item has no data, fallback to latest machine data for the same date.
+            if ((!data || !data.latest) && itemId) {
+                try {
+                    const fallbackRes = await fetchFreshJson(`api.php?action=fetch_summary&machine_no=${m}&date=${date}`);
+                    const fallbackData = await fallbackRes.json();
+                    // Use fallback data but DON'T change the dropdown selection
+                    // This preserves the user's manual item selection
+                    if (fallbackData && fallbackData.latest) {
+                        data = fallbackData;
+                    }
+                } catch (e) {
+                    // Keep original response if fallback fails.
+                }
+            }
+            
+            // Initialize all stats to default
+            document.getElementById(`w-${m}`).innerText = "0.00g";
+            document.getElementById(`w-time-${m}`).innerText = "--:--";
+            document.getElementById(`w-status-${m}`).innerText = "--";
+            document.getElementById(`w-status-${m}`).style.color = "#888";
+            document.getElementById(`stat-std-${m}`).innerText = '--';
+            document.getElementById(`stat-total-${m}`).innerText = '--';
+            document.getElementById(`stat-status-${m}`).innerText = '--';
+            document.getElementById(`stat-status-${m}`).style.color = '#888';
+            document.getElementById(`stat-total-weighted-${m}`).innerText = '0';
+            document.getElementById(`stat-avg-item-${m}`).innerText = '--';
+            document.getElementById(`stat-under-${m}`).innerText = '0';
+            document.getElementById(`stat-perfect-${m}`).innerText = '0';
+            document.getElementById(`stat-over-${m}`).innerText = '0';
+
+            const card = document.getElementById(`card-${m}`);
+            card.classList.remove('alarm');
+
+            if (!data.latest) {
+                if (filterChanged || state.lastDataKey !== '') {
+                    updateChart(m, [], null);
+                    updateBarDisplay(m, [], 0, 0);
+                    state.lastDataKey = '';
+                }
+                state.lastFilterKey = filterKey;
+                machineRenderState[m] = state;
+                return;
+            }
+
+            const cur = Number.isFinite(parseFloat(data.latest.weight)) ? parseFloat(data.latest.weight) : 0;
+            const tar = Number.isFinite(parseFloat(data.latest.standard_weight)) ? parseFloat(data.latest.standard_weight) : 0;
+            const tol = Number.isFinite(parseFloat(data.latest.tolerance)) ? parseFloat(data.latest.tolerance) : 0;
+            const history = (data.history || []).map(row => ({weight: Number.isFinite(parseFloat(row.weight)) ? parseFloat(row.weight) : 0, created_at: row.created_at}));
+            const weights = history.map(h => h.weight || 0);
+            const avg = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0;
+
+            // Extract and format current weight time
+            let currentWeightTime = '--:--';
+            if (data.latest && data.latest.created_at) {
+                const timeMatch = String(data.latest.created_at).match(/(\d{2}):(\d{2}):(\d{2})/);
+                if (timeMatch) currentWeightTime = `${timeMatch[1]}:${timeMatch[2]}`; // HH:MM format
+            }
+
+            // Calculate statistics
+            const totalRaw = weights.reduce((a, b) => a + b, 0);
+            const underCount = weights.filter(w => w < (tar - tol)).length;
+            const perfectCount = weights.filter(w => w >= (tar - tol) && w <= (tar + tol)).length;
+            const overCount = weights.filter(w => w > (tar + tol)).length;
+            const status = (Number.isFinite(avg) && Number.isFinite(tar) && Number.isFinite(tol)) ? (avg > (tar + tol) ? 'Over Weight' : avg < (tar - tol) ? 'Under Weight' : 'Perfect Avg') : 'No Data';
+
+            // Update current weight and statistics display
+            console.log(`Updating display for m${m}: cur=${cur}, weight=${cur.toFixed(2)}g`);
+            const weightEl = document.getElementById(`w-${m}`);
+            if (!weightEl) {
+                console.error(`Weight element not found for machine ${m}!`);
+            } else {
+                weightEl.innerText = (Number.isFinite(cur) ? cur.toFixed(2) : '0.00') + "g";
+                console.log(`Weight updated for m${m}: ${weightEl.innerText}`);
+            }
+            document.getElementById(`w-time-${m}`).innerText = currentWeightTime;
+            document.getElementById(`w-status-${m}`).innerText = status;
+            document.getElementById(`w-status-${m}`).style.color = status === 'Perfect Avg' ? '#43A047' : '#e74c3c';
+            document.getElementById(`stat-std-${m}`).innerText = (Number.isFinite(tar) ? tar : '--') + '\u00b1' + (Number.isFinite(tol) ? tol : '--') + 'g';
+            document.getElementById(`stat-total-${m}`).innerText = Number.isFinite(totalRaw) ? (totalRaw / 1000).toFixed(2) + 'kg' : '--';
+            document.getElementById(`stat-status-${m}`).innerText = status;
+            document.getElementById(`stat-status-${m}`).style.color = status === 'Perfect Avg' ? '#43A047' : '#e74c3c';
+            document.getElementById(`stat-total-weighted-${m}`).innerText = Number.isFinite(weights.length) ? weights.length : 0;
+            document.getElementById(`stat-avg-item-${m}`).innerText = Number.isFinite(avg) ? avg.toFixed(2) + 'g' : '--';
+            document.getElementById(`stat-under-${m}`).innerText = underCount;
+            document.getElementById(`stat-perfect-${m}`).innerText = perfectCount;
+            document.getElementById(`stat-over-${m}`).innerText = overCount;
+
+            if (Math.abs(avg - tar) > tol) card.classList.add('alarm');
+            else card.classList.remove('alarm');
+
+            const dataKey = `${data.latest.weight_id || ''}|${data.latest.created_at || ''}|${String(data.latest.weight || '')}|${data.latest.item_id || ''}`;
+            // Always ensure charts are rendered if filter changed or data key changed
+            if (filterChanged || state.lastDataKey !== dataKey) {
+                updateChart(m, history, tar);
+                updateBarDisplay(m, history, tar, tol);
+                state.lastDataKey = dataKey;
+            }
+            // Also ensure chart is re-rendered at least once even if data hasn't changed (prevent freeze)
+            if (!state.chartInitialized) {
+                updateChart(m, history, tar);
+                updateBarDisplay(m, history, tar, tol);
+                state.chartInitialized = true;
+            }
+
+                state.lastFilterKey = filterKey;
+                machineRenderState[m] = state;
+                machineLatestIds[m] = data.latest && data.latest.weight_id ? Number(data.latest.weight_id) : machineLatestIds[m];
+            } finally {
+                machineRefreshLock[m] = false;
+            }
+        }
+
+        async function quickWeightPoll() {
+            devices.forEach(async m => {
+                try {
+                    // Get selected filters for this machine
+                    const itemId = document.getElementById(`item-sel-${m}`)?.value || '';
+                    const selectedDate = document.getElementById(`date-sel-${m}`)?.value || '';
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    // Only update quick poll if the selected date is today
+                    // Otherwise, use refreshData for custom dates/items
+                    const isSelectedToday = !selectedDate || selectedDate === today;
+                    
+                    if (!isSelectedToday) {
+                        // If date is not today, use refreshData instead to respect the selection
+                        if (!machineRefreshLock[m]) {
+                            machineRefreshLock[m] = true;
+                            try {
+                                await refreshData(m);
+                            } finally {
+                                machineRefreshLock[m] = false;
+                            }
+                        }
+                        return;
+                    }
+                    
+                    // Initialize chart if not already done
+                    if (!window['chart'+m]) {
+                        const chartEl = document.getElementById(`trend-chart-${m}`);
+                        if (chartEl) {
+                            initChart(m);
+                        }
+                    }
+
+                    // Fetch latest weight data for the machine
+                    // If item is selected and date is today, filter by item
+                    let url = `api.php?action=fetch_summary&machine_no=${m}`;
+                    if (itemId && isSelectedToday) {
+                        url += `&item_id=${itemId}`;
+                    }
+                    url += `&date=${today}`;
+                    
+                    const res = await fetchFreshJson(url);
+                    
+                    if (!res.ok) {
+                        console.error(`Poll m${m} fetch failed: ${res.status}`);
+                        return;
+                    }
+                    
+                    const data = await res.json();
+                    console.log(`Poll m${m}:`, data?.latest?.weight, 'g at', data?.latest?.created_at);
+
+                    if (!data || !data.latest) {
+                        return;
+                    }
+
+                    // Parse values
+                    const cur = parseFloat(data.latest.weight);
+                    const tar = parseFloat(data.latest.standard_weight) || 0;
+                    const tol = parseFloat(data.latest.tolerance) || 0;
+                    const history = (data.history || []).map(row => ({weight: Number.isFinite(parseFloat(row.weight)) ? parseFloat(row.weight) : 0, created_at: row.created_at}));
+                    const weights = history.map(h => h.weight || 0);
+                    const avg = weights.length > 0 ? weights.reduce((a, b) => a + b, 0) / weights.length : 0;
+
+                    // Update weight display
+                    if (Number.isFinite(cur)) {
+                        const el = document.getElementById(`w-${m}`);
+                        if (el) el.innerText = cur.toFixed(2) + "g";
+                    }
+
+                    // Update time
+                    let timeStr = '--:--';
+                    if (data.latest.created_at) {
+                        const match = String(data.latest.created_at).match(/(\d{2}):(\d{2}):(\d{2})/);
+                        if (match) timeStr = `${match[1]}:${match[2]}`;
+                    }
+                    const timeEl = document.getElementById(`w-time-${m}`);
+                    if (timeEl) timeEl.innerText = timeStr;
+
+                    // Update main status
+                    const status = cur > (tar + tol) ? 'Over' : cur < (tar - tol) ? 'Under' : 'Perfect';
+                    const statusEl = document.getElementById(`w-status-${m}`);
+                    if (statusEl) {
+                        statusEl.innerText = status;
+                        statusEl.style.color = status === 'Perfect' ? '#43A047' : '#e74c3c';
+                    }
+
+                    // Update statistics section - based on filtered data
+                    const totalRaw = weights.reduce((a, b) => a + b, 0);
+                    const underCount = weights.filter(w => w < (tar - tol)).length;
+                    const perfectCount = weights.filter(w => w >= (tar - tol) && w <= (tar + tol)).length;
+                    const overCount = weights.filter(w => w > (tar + tol)).length;
+
+                    const statStdEl = document.getElementById(`stat-std-${m}`);
+                    if (statStdEl) statStdEl.innerText = (Number.isFinite(tar) ? tar : '--') + '\u00b1' + (Number.isFinite(tol) ? tol : '--') + 'g';
+                    
+                    const statTotalEl = document.getElementById(`stat-total-${m}`);
+                    if (statTotalEl) statTotalEl.innerText = Number.isFinite(totalRaw) ? (totalRaw / 1000).toFixed(2) + 'kg' : '--';
+                    
+                    const statStatusEl = document.getElementById(`stat-status-${m}`);
+                    if (statStatusEl) {
+                        statStatusEl.innerText = status;
+                        statStatusEl.style.color = status === 'Perfect' ? '#43A047' : '#e74c3c';
+                    }
+                    
+                    const statWeightedEl = document.getElementById(`stat-total-weighted-${m}`);
+                    if (statWeightedEl) statWeightedEl.innerText = Number.isFinite(weights.length) ? weights.length : 0;
+                    
+                    const statAvgEl = document.getElementById(`stat-avg-item-${m}`);
+                    if (statAvgEl) statAvgEl.innerText = Number.isFinite(avg) ? avg.toFixed(2) + 'g' : '--';
+                    
+                    const statUnderEl = document.getElementById(`stat-under-${m}`);
+                    if (statUnderEl) statUnderEl.innerText = underCount;
+                    
+                    const statPerfectEl = document.getElementById(`stat-perfect-${m}`);
+                    if (statPerfectEl) statPerfectEl.innerText = perfectCount;
+                    
+                    const statOverEl = document.getElementById(`stat-over-${m}`);
+                    if (statOverEl) statOverEl.innerText = overCount;
+
+                    // Update chart (trend line) - always update
+                    if (window['chart'+m]) {
+                        updateChart(m, history, tar);
+                    }
+
+                    // Update bars
+                    if (data.history && data.history.length > 0) {
+                        updateBarDisplay(m, data.history, tar, tol);
+                    }
+                } catch (e) {
+                    console.error(`Poll m${m} error:`, e.message);
+                }
+            });
+        }
+
+        async function pollMachineUpdates() {
+            const today = getTodayLocalDate();
+            devices.forEach(async m => {
+                const dateInput = document.getElementById(`date-sel-${m}`);
+                if (!dateInput) return;
+
+                // Full refresh only when date/item changes
+                if (dateInput.value === today) {
+                    if (!machineRefreshLock[m]) {
+                        machineRefreshLock[m] = true;
+                        try {
+                            await refreshData(m);
+                        } finally {
+                            machineRefreshLock[m] = false;
+                        }
+                    }
+                }
+            });
+        }
+
+        function initChart(m) {
+            try {
+                const el = document.getElementById(`trend-chart-${m}`);
+                if (!el) {
+                    console.warn(`Canvas not found for trend-chart-${m}`);
+                    return;
+                }
+                
+                // Destroy existing chart if it exists
+                if (window['chart'+m]) {
+                    try {
+                        window['chart'+m].destroy();
+                    } catch (e) {
+                        console.warn(`Error destroying existing chart for scale ${m}:`, e);
+                    }
+                }
+                
+                const ctx = el.getContext('2d');
+                if (!ctx) {
+                    console.warn(`Failed to get 2d context for trend-chart-${m}`);
+                    return;
+                }
+                
+                console.log(`Creating chart for scale ${m}, canvas size: ${el.width}x${el.height}`);
+                
+                window['chart'+m] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'Standard',
+                                data: [],
+                                borderColor: '#3498db',
+                                borderWidth: 2,
+                                borderDash: [6, 4],
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0
+                            },
+                            {
+                                label: 'Weight',
+                                data: [],
+                                borderColor: '#43A047',
+                                borderWidth: 2,
+                                pointRadius: 2,
+                                fill: false,
+                                tension: 0.2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#8892a0', maxTicksLimit: 5, font: { size: 9 } },
+                                grid: { color: 'rgba(120, 130, 145, 0.15)' }
+                            },
+                            y: {
+                                ticks: { color: '#8892a0', font: { size: 9 } },
+                                grid: { color: 'rgba(120, 130, 145, 0.15)' }
+                            }
+                        }
+                    }
+                });
+                
+                console.log(`Chart successfully created for scale ${m}`);
+            } catch (err) {
+                console.error(`Error initializing chart for scale ${m}:`, err);
+            }
+        }
+
+        function updateChart(m, history, target) {
+            const chart = window['chart'+m];
+            if (!chart) return;
+
+            const last10History = history.slice().reverse().slice(-10);
+
+            const labels = last10History.map((row, idx) => {
+                const match = row.created_at ? row.created_at.match(/(\d{2}):(\d{2}):(\d{2})/) : null;
+                if (match) return `${match[1]}:${match[2]}`;
+                return String(idx + 1);
+            });
+
+            const weightData = last10History.map(row => {
+                const v = parseFloat(row.weight);
+                return Number.isFinite(v) ? v : null;
+            });
+
+            const targetValue = parseFloat(target);
+            const hasTarget = Number.isFinite(targetValue);
+            const stdData = hasTarget ? new Array(weightData.length).fill(targetValue) : [];
+
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = stdData;
+            chart.data.datasets[1].data = weightData;
+            chart.update('none');
+        }
+
+        loadItems().then(loadDevices).then(() => {
+            // Initial full load once
+            devices.forEach(m => refreshData(m));
+            // Quick weight + bars poll every 500ms for instant updates
+            setInterval(quickWeightPoll, 500);
+        });
+
+        // Save shift selection to localStorage
+        function saveShift(m) {
+            const shiftVal = document.getElementById(`shift-sel-${m}`).value;
+            localStorage.setItem(`shift-${m}`, shiftVal);
+            console.log(`Shift saved for machine ${m}: ${shiftVal}`);
+        }
+
+        // Load shift selection from localStorage
+        function loadShift(m) {
+            const saved = localStorage.getItem(`shift-${m}`) || '';
+            const shiftSel = document.getElementById(`shift-sel-${m}`);
+            if (shiftSel) {
+                shiftSel.value = saved;
+            }
+        }
+
+        // Load all shifts when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                devices.forEach(m => loadShift(m));
+            }, 500);
+        });
+
+        // Open Report Menu
+        function openReportMenu() {
+            window.location.href = 'report.html';
+        }
+
+        // Generate Shift Wise Report
+        function generateShiftReport() {
+            const shift = prompt('Enter Shift (A, G, B, or C):', 'A');
+            if (!shift || !['A', 'G', 'B', 'C'].includes(shift.toUpperCase())) {
+                alert('Invalid shift');
+                return;
+            }
+
+            const machines = devices.filter(m => {
+                const saved = localStorage.getItem(`shift-${m}`);
+                return saved === shift.toUpperCase();
+            });
+
+            if (machines.length === 0) {
+                alert(`No machines assigned to Shift ${shift}`);
+                return;
+            }
+
+            alert(`Shift ${shift} Report Generated:\nMachines: ${machines.join(', ')}\n\nFeature: Export to CSV coming soon`);
+        }
+
+        // Generate Date Wise Report
+        function generateDateReport() {
+            const date = prompt('Enter Date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+            if (!date) return;
+
+            alert(`Date ${date} Report Generated\nFeature: Export data for this date coming soon`);
+        }
+
+        // Generate Scale Wise Report
+        function generateScaleReport() {
+            const scale = prompt(`Select Scale:\n${devices.join(', ')}\n\nEnter Scale Number:`, devices[0] || '1');
+            if (!scale || !devices.includes(parseInt(scale))) {
+                alert('Invalid scale');
+                return;
+            }
+
+            alert(`Scale #${scale} Report Generated\nFeature: Detailed scale statistics coming soon`);
+        }
+    </script>
+</body>
+</html>
